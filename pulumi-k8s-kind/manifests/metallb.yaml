@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metallb-controller
+  namespace: metallb-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metallb
+      component: controller
+  template:
+    metadata:
+      labels:
+        app: metallb
+        component: controller
+    spec:
+      containers:
+        - name: metallb-controller
+          image: metallb/controller:v0.13.0
+          ports:
+            - containerPort: 7472
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: /etc/metallb/config
+              name: config
+      volumes:
+        - name: config
+          configMap:
+            name: metallb-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metallb-controller
+  namespace: metallb-system
+spec:
+  ports:
+    - port: 7472
+      targetPort: 7472
+  selector:
+    app: metallb
+    component: controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metallb-speaker
+  namespace: metallb-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metallb
+      component: speaker
+  template:
+    metadata:
+      labels:
+        app: metallb
+        component: speaker
+    spec:
+      containers:
+        - name: metallb-speaker
+          image: metallb/speaker:v0.13.0
+          ports:
+            - containerPort: 7472
+          volumeMounts:
+            - mountPath: /etc/metallb/config
+              name: config
+      volumes:
+        - name: config
+          configMap:
+            name: metallb-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metallb-config
+  namespace: metallb-system
+data:
+  config: |
+    address-pools:
+    - name: default
+      protocol: layer2
+      addresses:
+      - 172.18.255.200-172.18.255.250
