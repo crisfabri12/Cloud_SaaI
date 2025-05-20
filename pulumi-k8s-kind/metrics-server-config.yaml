@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-server
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  template:
+    metadata:
+      labels:
+        k8s-app: metrics-server
+    spec:
+      containers:
+        - name: metrics-server
+          image: k8s.gcr.io/metrics-server/metrics-server:v0.6.1
+          command:
+            - /metrics-server
+            - --cert-dir=/tmp/certificates
+            - --kubelet-insecure-tls
+          volumeMounts:
+            - mountPath: /tmp/certificates
+              name: cert-volume
+      volumes:
+        - name: cert-volume
+          emptyDir: {}

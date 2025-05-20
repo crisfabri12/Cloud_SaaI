@@ -1,0 +1,21 @@
+kubectl get nodes	Muestra los nodos del clúster (verifica si tus workers y control-plane están activos).
+kubectl get pods -A	Lista todos los Pods en todos los namespaces.
+kubectl get svc -A	Muestra todos los servicios.
+kubectl get deployments -A	Lista todos los deployments.
+kubectl get all -n my-app	Muestra todos los recursos del namespace my-app.
+
+---------DEPLOYMENTS-----------
+
+kubectl describe deployment <nombre> -n <namespace>	Muestra detalles completos del deployment (réplicas, eventos, estrategia de actualización, etc.).
+kubectl scale deployment <nombre> --replicas=3 -n <namespace>	Escala un deployment (ej. aumentar réplicas de backend).
+kubectl rollout restart deployment <nombre> -n <namespace>	Reinicia todos los pods del deployment (útil para aplicar cambios en configs o secretos).
+kubectl rollout status deployment <nombre> -n <namespace>	Verifica el estado de un rollout en curso.
+kubectl rollout undo deployment <nombre> -n <namespace>	Revierte un deployment a su versión anterior.
+
+----------PODS Y DEBUG--------
+ubectl logs <pod-name> -n <namespace>	Muestra los logs de un pod (para debug).
+kubectl exec -it <pod-name> -n <namespace> -- /bin/bash	Accede a una terminal dentro del pod.
+kubectl describe pod <pod-name> -n <namespace>	Muestra detalles del pod, incluyendo errores de inicio o reinicios.
+
+kubectl get pods -A -o wide  Este comando lista los pods junto con detalles extendidos, incluyendo el nodo donde está corriendo cada pod.
+kubectl get deployments -A -o wide

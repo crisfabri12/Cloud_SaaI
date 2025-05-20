@@ -80,12 +80,41 @@ new k8s.core.v1.Service("backend-svc", { metadata: { name: "backend-svc", namesp
 new k8s.core.v1.Service("frontend-svc", { metadata: { name: "frontend-svc", namespace: appNs.metadata.name }, spec: { selector: { app: "frontend" }, ports: [{ port: 80, targetPort: 80 }] } }, { provider });
 
 // 9. Deployments
-new k8s.apps.v1.Deployment("backend-dep", {
-    metadata: { namespace: appNs.metadata.name },
+const backendDep = new k8s.apps.v1.Deployment("backend-dep", {
+    metadata: { namespace: appNs.metadata.name, name: "backend-dep" },
     spec: {
         replicas: 2,
         selector: { matchLabels: { app: "backend" } },
-        template: { metadata: { labels: { app: "backend" } }, spec: { containers: [{ name: "backend", image: "crisfabri98/backend:latest", ports: [{ containerPort: 3000 }], envFrom: [{ secretRef: { name: dbSecret.metadata.name } }, { configMapRef: { name: backendConfig.metadata.name } }] }] } },
+        template: { 
+            metadata: 
+            { 
+                labels: 
+                { 
+                    app: 
+                    "backend" 
+                } 
+            }, 
+                spec: 
+                { 
+                    containers: 
+                    [
+                        { 
+                            name: "backend", 
+                            image: "crisfabri98/backend:latest",
+                            imagePullPolicy: "Always", 
+                            ports: [{ containerPort: 3000 }], 
+                            envFrom: [
+                                { secretRef: { name: dbSecret.metadata.name } }, 
+                                { configMapRef: { name: backendConfig.metadata.name } }
+                            ],
+                            resources: {
+                                requests: { cpu: "100m" },
+                                limits: { cpu: "500m" }
+                              }
+                        }
+                    ] 
+                } 
+            },
     },
 }, { provider });
 new k8s.apps.v1.Deployment("frontend-dep", {
@@ -93,7 +122,7 @@ new k8s.apps.v1.Deployment("frontend-dep", {
     spec: {
         replicas: 2,
         selector: { matchLabels: { app: "frontend" } },
-        template: { metadata: { labels: { app: "frontend" } }, spec: { containers: [{ name: "frontend", image: "crisfabri98/frontend:latest", ports: [{ containerPort: 80 }] }] } },
+        template: { metadata: { labels: { app: "frontend" } }, spec: { containers: [{ name: "frontend", image: "crisfabri98/frontend:latest",imagePullPolicy: "Always", ports: [{ containerPort: 80 }] }] } },
     },
 }, { provider });
 
@@ -105,3 +134,31 @@ new k8s.networking.v1.Ingress("app-ingress", {
         rules: [{ host: "app.local", http: { paths: [ { path: "/api", pathType: "Prefix", backend: { service: { name: "backend-svc", port: { number: 3000 } } } }, { path: "/", pathType: "Prefix", backend: { service: { name: "frontend-svc", port: { number: 80 } } } } ] } }],
     },
 }, { provider });
+
+
+// Horizontal Pod Autoscaler (HPA) para el backend
+const backendHpa = new k8s.autoscaling.v2.HorizontalPodAutoscaler("backend-hpa", {
+    metadata: { 
+        namespace: appNs.metadata.name, 
+        name: "backend-hpa" },
+    spec: {
+        scaleTargetRef: {
+            apiVersion: "apps/v1",
+            kind: "Deployment",
+            //name: "backend-dep",  // El nombre de tu deployment del backend
+            name:       backendDep.metadata.name.apply(n => n!),
+        },
+        minReplicas: 1,   // Mínimo número de réplicas
+        maxReplicas: 5,   // Máximo número de réplicas
+        metrics: [{
+            type: "Resource",
+            resource: {
+                name: "cpu",
+                target: {
+                    type: "Utilization",
+                    averageUtilization: 30, // Ajusta el porcentaje de CPU que activará el escalado
+                },
+            },
+        }],
+    },
+}, { provider, dependsOn: [backendDep], protect: true  });
