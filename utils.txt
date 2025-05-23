@@ -19,3 +19,5 @@ kubectl describe pod <pod-name> -n <namespace>	Muestra detalles del pod, incluye
 
 kubectl get pods -A -o wide  Este comando lista los pods junto con detalles extendidos, incluyendo el nodo donde está corriendo cada pod.
 kubectl get deployments -A -o wide
+
+kubectl get deployment -n my-app

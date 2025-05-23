@@ -80,8 +80,8 @@ new k8s.core.v1.Service("backend-svc", { metadata: { name: "backend-svc", namesp
 new k8s.core.v1.Service("frontend-svc", { metadata: { name: "frontend-svc", namespace: appNs.metadata.name }, spec: { selector: { app: "frontend" }, ports: [{ port: 80, targetPort: 80 }] } }, { provider });
 
 // 9. Deployments
-const backendDep = new k8s.apps.v1.Deployment("backend-dep", {
-    metadata: { namespace: appNs.metadata.name, name: "backend-dep" },
+ const backendDep = new k8s.apps.v1.Deployment("backend-dep", {
+    metadata: { namespace: appNs.metadata.name},
     spec: {
         replicas: 2,
         selector: { matchLabels: { app: "backend" } },
@@ -135,7 +135,6 @@ new k8s.networking.v1.Ingress("app-ingress", {
     },
 }, { provider });
 
-
 // Horizontal Pod Autoscaler (HPA) para el backend
 const backendHpa = new k8s.autoscaling.v2.HorizontalPodAutoscaler("backend-hpa", {
     metadata: { 
@@ -145,20 +144,42 @@ const backendHpa = new k8s.autoscaling.v2.HorizontalPodAutoscaler("backend-hpa",
         scaleTargetRef: {
             apiVersion: "apps/v1",
             kind: "Deployment",
-            //name: "backend-dep",  // El nombre de tu deployment del backend
             name:       backendDep.metadata.name.apply(n => n!),
         },
-        minReplicas: 1,   // Mínimo número de réplicas
-        maxReplicas: 5,   // Máximo número de réplicas
+        minReplicas: 1,  
+        maxReplicas: 5, 
         metrics: [{
             type: "Resource",
             resource: {
                 name: "cpu",
                 target: {
                     type: "Utilization",
-                    averageUtilization: 30, // Ajusta el porcentaje de CPU que activará el escalado
+                    averageUtilization: 30, 
                 },
             },
         }],
     },
 }, { provider, dependsOn: [backendDep], protect: true  });
+
+
+///////// OPCIONAL PARA CARGA EN EL BACKEND Y PROBAR HPA //////////
+
+// // Simulador de carga
+// new k8s.apps.v1.Deployment("load-dep", {
+//     metadata: { namespace: appNs.metadata.name },
+//     spec: {
+//         replicas: 5,
+//         selector: { matchLabels: { app: "load" } },
+//         template: {
+//             metadata: { labels: { app: "load" } },
+//             spec: {
+//                 containers: [{
+//                     name: "load",
+//                     image: "busybox",
+//                     command: ["sh", "-c", "while true; do wget -q -O- http://backend-svc:3000/api; sleep 0.1; done"],
+//                 }],
+//                 restartPolicy: "Always",
+//             },
+//         },
+//     },
+// }, { provider });
